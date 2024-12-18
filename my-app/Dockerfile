@@ -1,31 +1,19 @@
 ### STAGE 1: Build ###
 FROM node:lts-alpine AS build
 
-#### make the 'app' folder the current working directory
-WORKDIR /usr/src/app
+WORKDIR /dist/src/app
 
-#### copy both 'package.json' and 'package-lock.json' (if available)
-COPY package*.json ./
+RUN npm cache clean --force
 
-#### install angular cli
-RUN npm install -g @angular/cli
-
-#### install project dependencies
-RUN npm install
-
-#### copy things
 COPY . .
-
-#### generate build --prod
+RUN npm install
 RUN npm run build --prod
 
-### STAGE 2: Run ###
-FROM nginxinc/nginx-unprivileged
 
-#### copy nginx conf
-COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+FROM nginx:latest AS ngi
 
-#### copy artifact build from the 'build environment'
-COPY --from=build /usr/src/app/dist/bookproject /usr/share/nginx/html
-
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=build /dist/src/app/dist/my-app /usr/share/nginx/html
+COPY /nginx.conf  /etc/nginx/conf.d/default.conf
+# Exposing a port, here it means that inside the container
+# the app will be using Port 80 while running
+EXPOSE 80
